@@ -4,7 +4,7 @@ Python script to check aws security group use by services in one region
 
 ## Motivation
 
-There are many tools to check security group use, but I wanted to create a tool that would allow me to check the use of one specific security groups in a region, and all the services using it as possible.
+There are many tools to check security group use, but I wanted to create a tool that would allow me to check the use of one specific security group in a region, and all the services using it as possible.
 
 ## About
 
@@ -12,17 +12,17 @@ The script will check the specified security group id in one region and will ret
 
 The script will check the following aws services:
 
-- "ec2"
-- "eni"
-- "elb"
-- "alb"
-- "rds"
-- "redshift"
-- "elasticache"
-- "eks"
-- "ecs"
-- "efs"
-- "emr"
+- ec2 instances
+- ec2 network interfaces
+- classic load balancers
+- application load balancers
+- rds instances)
+- redshift clusters
+- elasticache clusters
+- eks clusters
+- ecs clusters
+- efs file systems
+- emr clusters
 
 It will check all of them or the one specified in the command line.
 

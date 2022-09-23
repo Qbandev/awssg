@@ -13,14 +13,14 @@ try:
         "--region",
         type=str,
         default="us-east-1",
-        help="The AWS region to check (default used us-east-1)"
+        help="The AWS region to check (default 'us-east-1')"
     )
     parser.add_argument(
         "-p",
         "--profile",
         type=str,
         default="default",
-        help="The profile to use for the connection to AWS (default used 'default')",
+        help="The profile to use for the connection to AWS (default 'default')",
     )
     parser.add_argument(
         "-sgid",
@@ -39,14 +39,14 @@ try:
         nargs="?",
         choices=(
             "all", "ec2", "eni", "elb", "alb", "rds", "redshift", "elasticache", "eks", "ecs", "efs", "emr"),
-        help="AWS Service to check security group (default used 'all')",
+        help="AWS Service to check security group (default 'all')",
     )
     parser.add_argument(
         "-o",
         "--output",
         action="store",
         type=str,
-        help="Set output file name (default is sg-id.json).",
+        help="Set output file name (default 'sgid.json').",
     )
     args = parser.parse_args()
 
