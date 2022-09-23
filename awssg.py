@@ -1,9 +1,10 @@
 #!/usr/bin/env python
+"""Import modules"""
 import os
-import boto3
 import argparse
 import json
-import sys
+import boto3
+import botocore
 
 try:
     parser = argparse.ArgumentParser(
@@ -38,7 +39,8 @@ try:
         default="all",
         nargs="?",
         choices=(
-            "all", "ec2", "eni", "elb", "alb", "rds", "redshift", "elasticache", "eks", "ecs", "efs", "emr"),
+            "all", "ec2", "eni", "elb", "alb", "rds",
+            "redshift", "elasticache", "eks", "ecs", "efs", "emr"),
         help="AWS Service to check security group (default 'all')",
     )
     parser.add_argument(
@@ -62,7 +64,7 @@ try:
 
     try:
         # Get security group by instances
-        if args.service == "all" or args.service == "ec2":
+        if args.service in ("all", "ec2"):
             ec2_client = session.client("ec2", region_name=args.region)
             instances_dict = ec2_client.describe_instances()
             reservations = instances_dict["Reservations"]
@@ -74,7 +76,7 @@ try:
                                 "ec2InstanceId: " + i["Instances"][0]["InstanceId"])
 
         # Security Groups in use by Network Interfaces
-        if args.service == "all" or args.service == "eni":
+        if args.service in ("all", "eni"):
             eni_dict = ec2_client.describe_network_interfaces()
             for i in eni_dict["NetworkInterfaces"]:
                 for j in i["Groups"]:
@@ -83,7 +85,7 @@ try:
                             "eniNetworkInterfaceId: " + i["NetworkInterfaceId"])
 
         # Security groups used by classic ELBs
-        if args.service == "all" or args.service == "elb":
+        if args.service in ("all", "elb"):
             elb_client = session.client("elb", region_name=args.region)
             elb_dict = elb_client.describe_load_balancers()
             for i in elb_dict["LoadBalancerDescriptions"]:
@@ -93,7 +95,7 @@ try:
                             "elbLoadBalancerName: " + i["LoadBalancerName"])
 
         # Security groups used by ALBs
-        if args.service == "all" or args.service == "alb":
+        if args.service in ("all", "alb"):
             elb2_client = session.client("elbv2", region_name=args.region)
             elb2_dict = elb2_client.describe_load_balancers()
             for i in elb2_dict["LoadBalancers"]:
@@ -104,7 +106,7 @@ try:
                                 "albLoadBalancerName: " + i["LoadBalancerName"])
 
         # Security groups used by RDS
-        if args.service == "all" or args.service == "rds":
+        if args.service in ("all", "rds"):
             rds_client = session.client("rds", region_name=args.region)
             rds_dict = rds_client.describe_db_instances()
             for i in rds_dict["DBInstances"]:
@@ -114,7 +116,7 @@ try:
                             "rdsDBInstanceIdentifier: " + i["DBInstanceIdentifier"])
 
         # Security groups used by Redshift
-        if args.service == "all" or args.service == "redshift":
+        if args.service in ("all", "redshift"):
             redshift_client = session.client(
                 "redshift", region_name=args.region)
             redshift_dict = redshift_client.describe_clusters()
@@ -125,7 +127,7 @@ try:
                             "redshiftClusterIdentifier: " + i["ClusterIdentifier"])
 
         # Security groups used by Elasticache
-        if args.service == "all" or args.service == "elasticache":
+        if args.service in ("all", "elasticache"):
             elasticache_client = session.client(
                 "elasticache", region_name=args.region)
             elasticache_dict = elasticache_client.describe_cache_clusters()
@@ -136,7 +138,7 @@ try:
                             "elasticacheCacheClusterId: " + i["CacheClusterId"])
 
         # Security groups used by EKS
-        if args.service == "all" or args.service == "eks":
+        if args.service in ("all", "eks"):
             eks_client = session.client("eks", region_name=args.region)
             eks_dict = eks_client.list_clusters()
             for i in eks_dict["clusters"]:
@@ -146,7 +148,7 @@ try:
                         sg_associations.append("eksClusterId: " + i)
 
         # Security groups used by ECS
-        if args.service == "all" or args.service == "ecs":
+        if args.service in ("all", "ecs"):
             ecs_client = session.client("ecs", region_name=args.region)
             ecs_dict = ecs_client.list_clusters()
             for i in ecs_dict["clusterArns"]:
@@ -157,7 +159,10 @@ try:
                     for j in ecs_sg_dict["services"][0]["networkConfiguration"]["awsvpcConfiguration"]["securityGroups"]:
                         if j == args.securitygroupid:
                             sg_associations.append(
-                                "ecsClusterId: " + i.split(":cluster/", 1)[1] + " ecsServiceName: " + ecs_sg_dict["services"][0]["serviceArn"].split(":service/")[1])
+                                "ecsClusterId: " +
+                                i.split(":cluster/", 1)[1] +
+                                " ecsServiceName: "
+                                + ecs_sg_dict["services"][0]["serviceArn"].split(":service/")[1])
 
         # Security groups used by EFS
         if args.service == "all" or args.service == "efs":
@@ -172,7 +177,8 @@ try:
                     for k in efs_dict_sg["SecurityGroups"]:
                         if k == args.securitygroupid:
                             sg_associations.append(
-                                "efsFileSystemId: " + j["FileSystemId"] + " efsMountTargetId: " + j["MountTargetId"])
+                                "efsFileSystemId: " + j["FileSystemId"]
+                                + " efsMountTargetId: " + j["MountTargetId"])
 
         # Security groups used by EMR
         if args.service == "all" or args.service == "emr":
@@ -196,17 +202,20 @@ try:
                         sg_associations.append(
                             "emrClusterName: " + i["Name"])
 
-    except Exception as e:
-        print(e)
-        sys.exit(1)
+    except botocore.exceptions.ClientError as err:
+        if err.response['Error']['Code'] == 'InternalError':  # Generic error
+            # We grab the message
+            print("Internal error: " + err.response['Error']['Message'])
+        else:
+            raise err
 
     # Save the results to a file
-    if args.output == None:
-        file = open(args.securitygroupid+".json", "w")
+    if args.output is None:
+        file = open(args.securitygroupid+".json", "w", encoding="utf-8")
     else:
-        file = open(args.output, "w")
+        file = open(args.output, "w", encoding="utf-8")
 
-    if sg_associations == []:
+    if not sg_associations:
         print("No associations found for:" +
               args.securitygroupid + " in region " + args.region)
         file.write("No associations found for:" +
