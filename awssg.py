@@ -8,7 +8,7 @@ import botocore
 
 try:
     parser = argparse.ArgumentParser(
-        description="Find Security Group in AWS region")
+        description="Python script to check aws security group use by services in one region")
     parser.add_argument(
         "-r",
         "--region",
@@ -48,7 +48,7 @@ try:
         "--output",
         action="store",
         type=str,
-        help="Set output file name (default 'sgid.json').",
+        help="Set output file name (default 'securitygroupid-region.json')",
     )
     args = parser.parse_args()
 
@@ -212,7 +212,7 @@ try:
     # Save the results to a file
     filename = args.output
     if filename is None:
-        filename = args.securitygroupid+".json"
+        filename = args.securitygroupid+"-"+args.region+".json"
 
     with open(filename, "w", encoding="utf-8") as file:
         file.write(json.dumps(sg_associations, indent=2, sort_keys=True))
