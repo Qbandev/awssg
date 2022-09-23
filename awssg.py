@@ -165,7 +165,7 @@ try:
                                 + ecs_sg_dict["services"][0]["serviceArn"].split(":service/")[1])
 
         # Security groups used by EFS
-        if args.service == "all" or args.service == "efs":
+        if args.service in ("all", "efs"):
             efs_client = session.client("efs", region_name=args.region)
             efs_dict = efs_client.describe_file_systems()
             for i in efs_dict["FileSystems"]:
@@ -181,7 +181,7 @@ try:
                                 + " efsMountTargetId: " + j["MountTargetId"])
 
         # Security groups used by EMR
-        if args.service == "all" or args.service == "emr":
+        if args.service in ("all", "emr"):
             emr_client = session.client("emr", region_name=args.region)
             emr_dict = emr_client.list_clusters()
             for i in emr_dict["Clusters"]:
