@@ -8,7 +8,7 @@ There are many tools to check security group use, but I wanted to create a tool 
 
 ## About
 
-The script will check the specified security group id in one region and will return the services that use it from this list:
+The script will check the specified security group id in one region and will return the services using it from this list:
 
 - ec2 instances
 - ec2 network interfaces
@@ -22,11 +22,11 @@ The script will check the specified security group id in one region and will ret
 - efs file systems
 - emr clusters
 
-It will check all of them or the one specified in the command line and return the list of aws resources using the security group in one json file in the current directory.
+It is possible all of them or one specified in the command line. The list of aws resources using the security group will be stored in one json file in the current directory.
 
 ### Prerequisites
 
-- [python3](https://www.python.org/downloads/) or higher and [pip3](https://docs.python.org/3/installing/index.html)(already installed with python3)
+- [python3](https://www.python.org/downloads/) or higher and [pip3](https://docs.python.org/3/installing/index.html) (already installed with python3)
 
 ### Installing
 
@@ -80,4 +80,4 @@ You can check all the services in one region or just one, here is a simple examp
 python3 sgcheck.py -p prod -sgid sg-567892f85d -svc alb -r us-east-2
 ```
 
-The command return the alb load balancers that use the security group `sg-567892f85d` in the region `us-east-2` using the profile `prod` to connect to aws, and save the result in a json file in the current directory with the name `sg-567892f85d-us-east-2json`.
+The command return the alb load balancers that use the security group `sg-567892f85d` in the region `us-east-2` using the profile `prod` to connect to aws, and save the result in a json file in the current directory with the name `./sg-567892f85d-us-east-2json`.
