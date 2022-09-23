@@ -210,21 +210,12 @@ try:
             raise err
 
     # Save the results to a file
-    if args.output is None:
-        file = open(args.securitygroupid+".json", "w", encoding="utf-8")
-    else:
-        file = open(args.output, "w", encoding="utf-8")
+    filename = args.output
+    if filename is None:
+        filename = args.securitygroupid+".json"
 
-    if not sg_associations:
-        print("No associations found for:" +
-              args.securitygroupid + " in region " + args.region)
-        file.write("No associations found for:" +
-                   args.securitygroupid + " in region " + args.region)
-        file.close()
-    else:
-        print(json.dumps(sg_associations, indent=2, sort_keys=True))
+    with open(filename, "w", encoding="utf-8") as file:
         file.write(json.dumps(sg_associations, indent=2, sort_keys=True))
-        file.close()
 
 except KeyboardInterrupt:
     print("\nCtrl+C Caught, Terminating")
