@@ -40,7 +40,7 @@ try:
         nargs="?",
         choices=(
             "all", "ec2", "eni", "elb", "alb", "rds",
-            "redshift", "elasticache", "eks", "ecs", "efs", "emr"),
+            "redshift", "elasticache", "eks", "ecs", "efs", "emr", "lambda", "vpc"),
         help="AWS Service to check security group (default 'all')",
     )
     parser.add_argument(
@@ -77,6 +77,7 @@ try:
 
         # Security Groups in use by Network Interfaces
         if args.service in ("all", "eni"):
+            ec2_client = session.client("ec2", region_name=args.region)
             eni_dict = ec2_client.describe_network_interfaces()
             for i in eni_dict["NetworkInterfaces"]:
                 for j in i["Groups"]:
@@ -202,6 +203,28 @@ try:
                         sg_associations.append(
                             "emrClusterName: " + i["Name"])
 
+        # Security groups used by Lambda
+        if args.service in ("all", "lambda"):
+            lambda_client = session.client("lambda", region_name=args.region)
+            lambda_dict = lambda_client.list_functions()
+            for i in lambda_dict["Functions"]:
+                if "VpcConfig" in i.keys():
+                    for j in i["VpcConfig"]["SecurityGroupIds"]:
+                        if j == args.securitygroupid:
+                            sg_associations.append(
+                                "lambdaFunctionName: " + i["FunctionName"])
+
+        # Security groups used by VPC endpoints
+        if args.service in ("all", "vpc"):
+            vpc_client = session.client("ec2", region_name=args.region)
+            vpc_dict = vpc_client.describe_vpc_endpoints()
+            for i in vpc_dict["VpcEndpoints"]:
+                if "Groups" in i.keys():
+                    for j in i["Groups"]:
+                        if j["GroupId"] == args.securitygroupid:
+                            sg_associations.append(
+                                "vpcEndpointId: " + i["VpcEndpointId"])
+
     except botocore.exceptions.ClientError as err:
         if err.response['Error']['Code'] == 'InternalError':  # Generic error
             # We grab the message
@@ -212,7 +235,7 @@ try:
     # Save the results to a file
     filename = args.output
     if filename is None:
-        filename = args.securitygroupid+"-"+args.region+".json"
+        filename = args.securitygroupid+"-"+args.service+"-"+args.region+".json"
 
     with open(filename, "w", encoding="utf-8") as file:
         file.write(json.dumps(sg_associations, indent=2, sort_keys=True))
