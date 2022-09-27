@@ -48,7 +48,7 @@ try:
         "--output",
         action="store",
         type=str,
-        help="Set output file name (default 'securitygroupid-region.json')",
+        help="Set output file name (default 'securitygroupid-service-region.json')",
     )
     args = parser.parse_args()
 
