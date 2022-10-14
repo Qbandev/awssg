@@ -39,8 +39,8 @@ try:
         default="all",
         nargs="?",
         choices=(
-            "all", "ec2", "eni", "elb", "alb", "rds",
-            "redshift", "elasticache", "eks", "ecs", "efs", "emr", "lambda", "vpc"),
+            "all", "ec2", "elb", "alb", "rds",
+            "redshift", "elasticache", "eks", "ecs", "efs", "emr", "lambda", "vpc", "eni"),
         help="AWS Service to check security group (default 'all')",
     )
     parser.add_argument(
@@ -57,7 +57,7 @@ try:
     os.environ['BOTO_DISABLE_COMMONNAME'] = 'True'
 
     # Open Boto3 session
-    session = boto3.session.Session(profile_name=args.profile)
+    session = boto3.session.Session(profile_name=args.profile, region_name=args.region)
 
     # Create the SG dictionary to store the data
     sg_associations = []
@@ -65,7 +65,7 @@ try:
     try:
         # Get security group by instances
         if args.service in ("all", "ec2"):
-            ec2_client = session.client("ec2", region_name=args.region)
+            ec2_client = session.client("ec2")
             instances_dict = ec2_client.describe_instances()
             reservations = instances_dict["Reservations"]
             for i in reservations:
@@ -73,84 +73,74 @@ try:
                     for k in j["SecurityGroups"]:
                         if k["GroupId"] == args.securitygroupid:
                             sg_associations.append(
-                                "ec2InstanceId: " + i["Instances"][0]["InstanceId"])
-
-        # Security Groups in use by Network Interfaces
-        if args.service in ("all", "eni"):
-            ec2_client = session.client("ec2", region_name=args.region)
-            eni_dict = ec2_client.describe_network_interfaces()
-            for i in eni_dict["NetworkInterfaces"]:
-                for j in i["Groups"]:
-                    if j["GroupId"] == args.securitygroupid:
-                        sg_associations.append(
-                            "eniNetworkInterfaceId: " + i["NetworkInterfaceId"])
+                                "ec2Id: " + i["Instances"][0]["InstanceId"])
 
         # Security groups used by classic ELBs
         if args.service in ("all", "elb"):
-            elb_client = session.client("elb", region_name=args.region)
+            elb_client = session.client("elb")
             elb_dict = elb_client.describe_load_balancers()
             for i in elb_dict["LoadBalancerDescriptions"]:
                 for j in i["SecurityGroups"]:
                     if j == args.securitygroupid:
                         sg_associations.append(
-                            "elbLoadBalancerName: " + i["LoadBalancerName"])
+                            "elbName: " + i["LoadBalancerName"])
 
         # Security groups used by ALBs
         if args.service in ("all", "alb"):
-            elb2_client = session.client("elbv2", region_name=args.region)
+            elb2_client = session.client("elbv2")
             elb2_dict = elb2_client.describe_load_balancers()
             for i in elb2_dict["LoadBalancers"]:
                 if "SecurityGroups" in i.keys():
                     for j in i["SecurityGroups"]:
                         if j == args.securitygroupid:
                             sg_associations.append(
-                                "albLoadBalancerName: " + i["LoadBalancerName"])
+                                "albName: " + i["LoadBalancerName"])
 
         # Security groups used by RDS
         if args.service in ("all", "rds"):
-            rds_client = session.client("rds", region_name=args.region)
+            rds_client = session.client("rds")
             rds_dict = rds_client.describe_db_instances()
             for i in rds_dict["DBInstances"]:
                 for j in i["VpcSecurityGroups"]:
                     if j["VpcSecurityGroupId"] == args.securitygroupid:
                         sg_associations.append(
-                            "rdsDBInstanceIdentifier: " + i["DBInstanceIdentifier"])
+                            "rdsId: " + i["DBInstanceIdentifier"])
 
         # Security groups used by Redshift
         if args.service in ("all", "redshift"):
             redshift_client = session.client(
-                "redshift", region_name=args.region)
+                "redshift")
             redshift_dict = redshift_client.describe_clusters()
             for i in redshift_dict["Clusters"]:
                 for j in i["VpcSecurityGroups"]:
                     if j["VpcSecurityGroupId"] == args.securitygroupid:
                         sg_associations.append(
-                            "redshiftClusterIdentifier: " + i["ClusterIdentifier"])
+                            "redshiftId: " + i["ClusterIdentifier"])
 
         # Security groups used by Elasticache
         if args.service in ("all", "elasticache"):
             elasticache_client = session.client(
-                "elasticache", region_name=args.region)
+                "elasticache")
             elasticache_dict = elasticache_client.describe_cache_clusters()
             for i in elasticache_dict["CacheClusters"]:
                 for j in i["SecurityGroups"]:
                     if j["SecurityGroupId"] == args.securitygroupid:
                         sg_associations.append(
-                            "elasticacheCacheClusterId: " + i["CacheClusterId"])
+                            "elasticacheId: " + i["CacheClusterId"])
 
         # Security groups used by EKS
         if args.service in ("all", "eks"):
-            eks_client = session.client("eks", region_name=args.region)
+            eks_client = session.client("eks")
             eks_dict = eks_client.list_clusters()
             for i in eks_dict["clusters"]:
                 eks_sg_dict = eks_client.describe_cluster(name=i)
                 for j in eks_sg_dict["cluster"]["resourcesVpcConfig"]["securityGroupIds"]:
                     if j == args.securitygroupid:
-                        sg_associations.append("eksClusterId: " + i)
+                        sg_associations.append("eksId: " + i)
 
         # Security groups used by ECS
         if args.service in ("all", "ecs"):
-            ecs_client = session.client("ecs", region_name=args.region)
+            ecs_client = session.client("ecs")
             ecs_dict = ecs_client.list_clusters()
             for i in ecs_dict["clusterArns"]:
                 ecs_svc_dict = ecs_client.list_services(cluster=i)
@@ -167,7 +157,7 @@ try:
 
         # Security groups used by EFS
         if args.service in ("all", "efs"):
-            efs_client = session.client("efs", region_name=args.region)
+            efs_client = session.client("efs")
             efs_dict = efs_client.describe_file_systems()
             for i in efs_dict["FileSystems"]:
                 efs_mount_dict = efs_client.describe_mount_targets(
@@ -183,7 +173,7 @@ try:
 
         # Security groups used by EMR
         if args.service in ("all", "emr"):
-            emr_client = session.client("emr", region_name=args.region)
+            emr_client = session.client("emr")
             emr_dict = emr_client.list_clusters()
             for i in emr_dict["Clusters"]:
                 if i["Status"]["State"] == "WAITING":
@@ -205,7 +195,7 @@ try:
 
         # Security groups used by Lambda
         if args.service in ("all", "lambda"):
-            lambda_client = session.client("lambda", region_name=args.region)
+            lambda_client = session.client("lambda")
             lambda_dict = lambda_client.list_functions()
             for i in lambda_dict["Functions"]:
                 if "VpcConfig" in i.keys():
@@ -216,7 +206,7 @@ try:
 
         # Security groups used by VPC endpoints
         if args.service in ("all", "vpc"):
-            vpc_client = session.client("ec2", region_name=args.region)
+            vpc_client = session.client("ec2")
             vpc_dict = vpc_client.describe_vpc_endpoints()
             for i in vpc_dict["VpcEndpoints"]:
                 if "Groups" in i.keys():
@@ -224,6 +214,17 @@ try:
                         if j["GroupId"] == args.securitygroupid:
                             sg_associations.append(
                                 "vpcEndpointId: " + i["VpcEndpointId"])
+
+        # Security Groups in use by Network Interfaces
+        if args.service in ("all", "eni"):
+            ec2_client = session.client("ec2")
+            eni_dict = ec2_client.describe_network_interfaces()
+            for i in eni_dict["NetworkInterfaces"]:
+                for j in i["Groups"]:
+                    if j["GroupId"] == args.securitygroupid:
+                        sg_associations.append(
+                            "eniId: " + i["NetworkInterfaceId"])
+
 
     except botocore.exceptions.ClientError as err:
         if err.response['Error']['Code'] == 'InternalError':  # Generic error
